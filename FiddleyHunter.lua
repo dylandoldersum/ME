@@ -99,8 +99,12 @@ end
 while API.Read_LoopyLoop() do
     for i in ipairs(plainWhirl) do
         if hasFollower then
+            if API.Buffbar_GetIDstatus(52770).conv_text == 3 then
+                UTILS.randomSleep(2000);
+                print("Idle for 2 seconds, cuz stack is above 3")
+            end
             API.DoAction_NPC(0x29,1488,{ plainWhirl[i] }, 50)
-            UTILS.randomSleep(1000);
+            UTILS.randomSleep(1000)
         else
             handleFrito()
         end

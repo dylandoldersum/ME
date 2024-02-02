@@ -2,88 +2,58 @@ API = require('api')
 UTILS = require("utils")
 COLORS = require("colors")
 
+local pickedWhirl = {};
+local whirlieNPCS = {};
+local roseStages = {122504, 122505, 122506, 122507 }
+local threatScarab = 28671
+local Cselect =
+    API.ScriptDialogWindow2(
+    "Whirligig",
+    {"Plain", "Cultivate rose"},
+    "Start",
+    "Close"
+).Name
+
+if Cselect == "Plain" then
+    whirlieNPCS = {28726, 28720, 28722, 28723, 28724, 28725, 28719}
+end
+
 local hasFollower = false;
-local plainWhirl = {28726, 28720, 28722, 28723, 28724, 28725, 28719}
 local unhandledFrito = 28665;
 local handledFrito = 28666;
 
-local startXp = API.GetSkillXP("HUNTER")
-local startTime, afk = os.time(), os.time()
-
--- Rounds a number to the nearest integer or to a specified number of decimal places.
-local function round(val, decimal)
-    if decimal then
-        return math.floor((val * 10 ^ decimal) + 0.5) / (10 ^ decimal)
-    else
-        return math.floor(val + 0.5)
-    end
-end
-
-function formatNumber(num)
-    if num >= 1e6 then
-        return string.format("%.1fM", num / 1e6)
-    elseif num >= 1e3 then
-        return string.format("%.1fK", num / 1e3)
-    else
-        return tostring(num)
-    end
-end
-
--- Format script elapsed time to [hh:mm:ss]
-local function formatElapsedTime(startTime)
-    local currentTime = os.time()
-    local elapsedTime = currentTime - startTime
-    local hours = math.floor(elapsedTime / 3600)
-    local minutes = math.floor((elapsedTime % 3600) / 60)
-    local seconds = elapsedTime % 60
-    return string.format("[%02d:%02d:%02d]", hours, minutes, seconds)
-end
-
-local function calcProgressPercentage(skill, currentExp)
-    local currentLevel = API.XPLevelTable(API.GetSkillXP(skill))
-    if currentLevel == 120 then return 100 end
-    local nextLevelExp = XPForLevel(currentLevel + 1)
-    local currentLevelExp = XPForLevel(currentLevel)
-    local progressPercentage = (currentExp - currentLevelExp) / (nextLevelExp - currentLevelExp) * 100
-    return math.floor(progressPercentage)
-end
-
-local function printProgressReport(final)
-    local skill = "HUNTER"
-    local currentXp = API.GetSkillXP(skill)
-    local elapsedMinutes = (os.time() - startTime) / 60
-    local diffXp = math.abs(currentXp - startXp);
-    local xpPH = round((diffXp * 60) / elapsedMinutes);
-    local time = formatElapsedTime(startTime)
-    local currentLevel = API.XPLevelTable(API.GetSkillXP(skill))
-    IGP.radius = calcProgressPercentage(skill, API.GetSkillXP(skill)) / 100
-    IGP.string_value = time ..
-    " | " ..
-    string.lower(skill):gsub("^%l", string.upper) ..
-    ": " .. currentLevel .. " | XP/H: " .. formatNumber(xpPH) .. " | XP: " .. formatNumber(diffXp)
-end
-
-local function setupGUI()
-    IGP = API.CreateIG_answer()
-    IGP.box_start = FFPOINT.new(5, 5, 0)
-    IGP.box_name = "PROGRESSBAR"
-    IGP.colour = ImColor.new(colorsRGB.RGB("burlywood"));
-    IGP.string_value = "WHIRLIGIG CATCHING"
-end
-
-function drawGUI()
-    API.DrawProgressBar(IGP)
-end
-
-setupGUI()
-
-function findNpc(npcid, distance)
+function findNpcOrObject(npcid, distance, objType)
     local distance = distance or 20
-    return #API.GetAllObjArrayInteract({ npcid }, distance, 1) > 0
+    return #API.GetAllObjArrayInteract({ npcid }, distance, objType) > 0
+end
+
+
+function cultivateRose()
+    if API.GetPlayerAnimation_(API.GetLocalPlayerName()) == -1 then
+        print ("Not doing anything..")
+        for i in ipairs(roseStages) do
+            if findNpcOrObject(roseStages[i], 3, 0) then
+                print("Found current rose stage!", roseStages[i])
+                API.DoAction_Object1(0x29,0,{ roseStages[i] },50)
+            end
+        end
+        checkForThreats()
+    end
+end
+
+function checkForThreats()
+    print("Looking for threats")
+    if findNpcOrObject(threatScarab, 10, 1) then
+        print("Pasty Scarab found! Shoo away")
+        API.DoAction_NPC(0x29,1488,{ threatScarab },50)
+        UTILS.randomSleep(1000)
+        print("Threats clear")
+    end
+    UTILS.randomSleep(1500)
 end
 
 function handleFrito()
-    if not findNpc(handledFrito, 20) then
+    if not findNpcOrObject(handledFrito, 20, 1) then
         print("I have no frito, click handle frito.")
         API.DoAction_NPC(0x29,1488,{ unhandledFrito },50)
         UTILS.randomSleep(1000);
@@ -97,18 +67,22 @@ function handleFrito()
 end
 
 while API.Read_LoopyLoop() do
-    for i in ipairs(plainWhirl) do
-        if hasFollower then
-            if API.Buffbar_GetIDstatus(52770).conv_text == 3 then
-                UTILS.randomSleep(2000);
-                print("Idle for 2 seconds, cuz stack is above 3")
+    if not string.match(Cselect, "Cultivate") then
+        print("Starting croc")
+        for i in ipairs(whirlieNPCS) do
+            if hasFollower then
+                if API.Buffbar_GetIDstatus(52770).conv_text == 3 then
+                    UTILS.randomSleep(2000);
+                    print("Idle for 2 seconds, cuz stack is above 3")
+                end
+                API.DoAction_NPC(0x29,1488,{ whirlieNPCS[i] }, 50)
+                UTILS.randomSleep(1000)
+            else
+                handleFrito()
             end
-            API.DoAction_NPC(0x29,1488,{ plainWhirl[i] }, 50)
-            UTILS.randomSleep(1000)
-        else
-            handleFrito()
         end
-        drawGUI()
-        printProgressReport()
+    else
+        cultivateRose()
     end
+    API.SetDrawTrackedSkills(true)
 end

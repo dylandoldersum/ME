@@ -17,6 +17,9 @@ local Cselect =
 if Cselect == "Plain" then
     whirlieNPCS = {28726, 28720, 28722, 28723, 28724, 28725, 28719}
 end
+if Cselect == "Dazzling" then
+    whirlieNPCS = {28726, 28720, 28722, 28723, 28724, 28725, 28719}
+end
 
 local hasFollower = false;
 local unhandledFrito = 28665;
@@ -25,6 +28,21 @@ local handledFrito = 28666;
 function findNpcOrObject(npcid, distance, objType)
     local distance = distance or 20
     return #API.GetAllObjArrayInteract({ npcid }, distance, objType) > 0
+end
+
+function run_to_tile(x, y, z)
+    local tile = WPOINT.new(x, y, z)
+    API.DoAction_Tile(tile)
+    while API.Read_LoopyLoop() and API.Math_DistanceW(API.PlayerCoord(), tile) > 5 do
+        API.RandomSleep2(100, 200, 200)
+    end
+end
+
+function randomWalk()
+    if math.random(1, 40) == 5 then
+        print ("Random walking")
+        run_to_tile(3378+math.random(1, 4), 3207+math.random(1, 8), 0)
+    end
 end
 
 
@@ -71,10 +89,11 @@ while API.Read_LoopyLoop() do
         print("Starting croc")
         for i in ipairs(whirlieNPCS) do
             if hasFollower then
-                if API.Buffbar_GetIDstatus(52770).conv_text == 3 then
+                if API.Buffbar_GetIDstatus(52770).conv_text >= 3 then
                     UTILS.randomSleep(2000);
-                    print("Idle for 2 seconds, cuz stack is above 3")
+                    print("Idle for 2 seconds, cuz stack is above 5")
                 end
+                randomWalk()
                 API.DoAction_NPC(0x29,1488,{ whirlieNPCS[i] }, 50)
                 UTILS.randomSleep(1000)
             else

@@ -6,10 +6,13 @@ local pickedWhirl = {};
 local whirlieNPCS = {};
 local roseStages = {122504, 122505, 122506, 122507 }
 local threatScarab = 28671
+local unhandledFrito = 28665;
+startTime, afk = os.time(), os.time()
+
 local Cselect =
     API.ScriptDialogWindow2(
     "Whirligig",
-    {"Plain", "Cultivate rose"},
+    {"Catch Whirligigs", "Cultivate rose"},
     "Start",
     "Close"
 ).Name
@@ -17,13 +20,16 @@ local Cselect =
 if Cselect == "Plain" then
     whirlieNPCS = {28726, 28720, 28722, 28723, 28724, 28725, 28719}
 end
-if Cselect == "Dazzling" then
-    whirlieNPCS = {28726, 28720, 28722, 28723, 28724, 28725, 28719}
-end
 
-local hasFollower = false;
-local unhandledFrito = 28665;
-local handledFrito = 28666;
+local function idleCheck()
+    local timeDiff = os.difftime(os.time(), afk)
+    local randomTime = math.random((5 * 60) * 0.6, (5 * 60) * 0.9)
+
+    if timeDiff > randomTime then
+        API.PIdle2()
+        afk = os.time()
+    end
+end
 
 function findNpcOrObject(npcid, distance, objType)
     local distance = distance or 20
@@ -39,12 +45,27 @@ function run_to_tile(x, y, z)
 end
 
 function randomWalk()
-    if math.random(1, 40) == 5 then
+    local randomW = math.random(1,40)
+    if randomW == 5 then
         print ("Random walking")
         run_to_tile(3378+math.random(1, 4), 3207+math.random(1, 8), 0)
     end
 end
 
+function fillRoses()
+    print ("Basket quantity: ", getBasketQuantity())
+    if API.InvItemcount_String("Roses") >= 1 then
+        if getBasketQuantity() <= 5 then
+            print ("Time to refill basket")
+            UTILS.randomSleep(5000)
+            print ("5 secs sleep")
+            API.DoAction_Object1(0x29,240,{ 122495 },50)
+            UTILS.randomSleep(1500)
+            API.WaitUntilMovingEnds()
+            print("Roses refilled")
+        end
+    end
+end
 
 function cultivateRose()
     if API.GetPlayerAnimation_(API.GetLocalPlayerName()) == -1 then
@@ -70,36 +91,48 @@ function checkForThreats()
     UTILS.randomSleep(1500)
 end
 
+function getFritoState()
+    return (API.VB_FindPSett(10339).state)
+end
+
+function getAttackState()
+    local whirlStackVB = API.VB_FindPSett(10338).state 
+    return whirlStackVB
+end
+
+function getBasketQuantity()
+    local flowerBasketVB = API.VB_FindPSett(10330).state
+    local flowerQuant64 = flowerBasketVB >> 18 & 0xfff
+    return flowerQuant64 / 64
+end
+
 function handleFrito()
-    if not findNpcOrObject(handledFrito, 20, 1) then
-        print("I have no frito, click handle frito.")
+    if getFritoState() > 1 then
+        catchWhirls()
+    else
         API.DoAction_NPC(0x29,1488,{ unhandledFrito },50)
         UTILS.randomSleep(1000);
-        hasFollower = true;
         print("Frito is now ur pet.")
-    else
-        hasFollower = true;
-        print("Already has frito.")
-        UTILS.randomSleep(1000);
+    end  
+end
+
+function catchWhirls()
+    for i in ipairs(whirlieNPCS) do
+        if API.Buffbar_GetIDstatus(52770).conv_text >=5 then
+            UTILS.randomSleep(2000);
+            print("Idle for 2 seconds, cuz stack is above 5")
+        end
+        API.DoAction_NPC(0x29,1488,{ whirlieNPCS[i] }, 50)
+        UTILS.randomSleep(1500)
+        fillRoses()
+        randomWalk()
     end
 end
 
 while API.Read_LoopyLoop() do
-    if not string.match(Cselect, "Cultivate") then
-        print("Starting croc")
-        for i in ipairs(whirlieNPCS) do
-            if hasFollower then
-                if API.Buffbar_GetIDstatus(52770).conv_text >= 3 then
-                    UTILS.randomSleep(2000);
-                    print("Idle for 2 seconds, cuz stack is above 5")
-                end
-                randomWalk()
-                API.DoAction_NPC(0x29,1488,{ whirlieNPCS[i] }, 50)
-                UTILS.randomSleep(1000)
-            else
-                handleFrito()
-            end
-        end
+    idleCheck()
+    if not string.match(Cselect, "Cultivate") then    
+        handleFrito()
     else
         cultivateRose()
     end

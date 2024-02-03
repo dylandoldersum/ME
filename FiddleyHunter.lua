@@ -3,10 +3,11 @@ UTILS = require("utils")
 COLORS = require("colors")
 
 local pickedWhirl = {};
-local whirlieNPCS = {};
+local whirlieNPCS = {28726, 28720, 28722, 28723, 28724, 28725, 28719}
 local roseStages = {122504, 122505, 122506, 122507 }
 local threatScarab = 28671
 local unhandledFrito = 28665;
+local flowerBasket = false;
 startTime, afk = os.time(), os.time()
 
 local Cselect =
@@ -17,8 +18,13 @@ local Cselect =
     "Close"
 ).Name
 
-if Cselect == "Plain" then
-    whirlieNPCS = {28726, 28720, 28722, 28723, 28724, 28725, 28719}
+
+
+if Cselect == "Catch Whirligigs" then
+    local Ccheck = API.ScriptDialogWindow2("Flower basket?", {"Yes", "No"}, "Start", "Close").Name
+    if Ccheck == "Yes" then
+        flowerBasket = true
+    end
 end
 
 local function idleCheck()
@@ -54,16 +60,14 @@ end
 
 function fillRoses()
     print ("Basket quantity: ", getBasketQuantity())
-    if API.InvItemcount_String("Roses") >= 1 then
-        if getBasketQuantity() <= 5 then
-            print ("Time to refill basket")
-            UTILS.randomSleep(5000)
-            print ("5 secs sleep")
-            API.DoAction_Object1(0x29,240,{ 122495 },50)
-            UTILS.randomSleep(1500)
-            API.WaitUntilMovingEnds()
-            print("Roses refilled")
-        end
+    if getBasketQuantity() <= 5 then
+        print ("Time to refill basket")
+        UTILS.randomSleep(5000)
+        print ("5 secs sleep")
+        API.DoAction_Object1(0x29,240,{ 122495 },50)
+        UTILS.randomSleep(1500)
+        API.WaitUntilMovingEnds()
+        print("Roses refilled")
     end
 end
 
@@ -124,7 +128,9 @@ function catchWhirls()
         end
         API.DoAction_NPC(0x29,1488,{ whirlieNPCS[i] }, 50)
         UTILS.randomSleep(1500)
-        fillRoses()
+        if flowerBasket then
+            fillRoses()
+        end
         randomWalk()
     end
 end

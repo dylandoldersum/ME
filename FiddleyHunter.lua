@@ -107,6 +107,12 @@ end
 
 local function checkForThreats()
     print("Looking for threats")
+    if findNpcOrObject(7620, 10, 4) then
+        print("Nutritous gas inbound.")
+        API.DoAction_NPC(0x29,1488,{ 7620 },50)
+        UTILS.randomSleep(1000)
+        print("Threats clear")
+    end
     if findNpcOrObject(threatScarab, 10, 1) then
         print("Pasty Scarab found! Shoo away")
         API.DoAction_NPC(0x29,1488,{ threatScarab },50)

@@ -9,6 +9,7 @@ local basketId = 0
 local threatScarab = 28671
 local unhandledFrito = 28665;
 local flowerBasket = false;
+local atualFlowerStage = 0;
 startTime, afk = os.time(), os.time()
 
 local Cselect =
@@ -29,6 +30,13 @@ local function getBasketQuantity()
     local flowerBasketVB = API.VB_FindPSett(10330).state
     local flowerQuant64 = flowerBasketVB >> 18 & 0xfff
     return flowerQuant64 / 64
+end
+
+local function getBasketQuantity2()
+    local flowerBasket2VB = API.VB_FindPSett(10331).state
+    local mask = 0xFFFFFFFF >> 26
+    local flowerBasketCleared = flowerBasket2VB & mask
+    return flowerBasketCleared
 end
 
 if Cselect == "Catch Whirligigs" then
@@ -72,7 +80,8 @@ end
 
 local function findNpcOrObject(npcid, distance, objType)
     local distance = distance or 20
-    return #API.GetAllObjArrayInteract({ npcid }, distance, objType) > 0
+
+    return #API.GetAllObjArray1({ npcid }, distance, objType) > 0
 end
 
 local function run_to_tile(x, y, z)
@@ -96,6 +105,19 @@ local function fillRoses()
     print ("Basket quantity: ", getBasketQuantity())
     if getBasketQuantity() <= 9 then
         print ("Time to refill basket")
+        run_to_tile(3383 + math.random(-1,0),3213 + math.random(-1,0),0)
+        UTILS.randomSleep(5000)
+        print ("5 secs sleep")
+        API.DoAction_Object1(0x29,240,{ basketId },50)
+        UTILS.randomSleep(1500)
+        API.WaitUntilMovingEnds()
+        print("Roses refilled")
+    end
+
+    print ("Basket2 quantity: ", getBasketQuantity2())
+    if getBasketQuantity2() <= 9 then 
+        print ("Time to refill basket")
+        run_to_tile(3376 + math.random(0,1),3206 + math.random(-1,1),0)
         UTILS.randomSleep(5000)
         print ("5 secs sleep")
         API.DoAction_Object1(0x29,240,{ basketId },50)
@@ -109,7 +131,8 @@ local function checkForThreats()
     print("Looking for threats")
     if findNpcOrObject(7620, 10, 4) then
         print("Nutritous gas inbound.")
-        API.DoAction_NPC(0x29,1488,{ 7620 },50)
+        -- API.DoAction_NPC(0x29,1488,{ 7620 },50)
+        API.DoAction_Object1(0x29,0,{ atualFlowerStage },50)
         UTILS.randomSleep(1000)
         print("Threats clear")
     end
@@ -128,6 +151,9 @@ local function cultivateFlowers()
         for i in ipairs(flowerStages) do
             if findNpcOrObject(flowerStages[i], 3, 0) then
                 print("Found current rose stage!", flowerStages[i])
+                if flowerStages[i] ~= atualFlowerStage then 
+                    atualFlowerStage = flowerStages[i]
+                end
                 API.DoAction_Object1(0x29,0,{ flowerStages[i] },50)
             end
         end

@@ -8,7 +8,7 @@ local GUILib           = require("gui_lib")
 
 -- ── Config ────────────────────────────────────────────────────────────────────
 
-local FOOD_NAME        = "shark" -- naam van het food item (lowercase, partial match)
+local FOOD_NAME        = "shark"
 
 -- ── Constanten ────────────────────────────────────────────────────────────────
 
@@ -16,27 +16,18 @@ local WAR_AREA_REGION  = 13214
 local RASIAL_CITDAEL   = 3355
 local ARMORED_ZOMBIE   = 30164
 local HERMOD_BOSS      = 30163
---API.DoAction_Interface(0x24,0xffffffff,1,1591,60,-1,API.OFF_ACT_GeneralInterface_route)#START interface boss
 
 local SCRIPT_VERSION   = "1.0"
-
--- ── State ─────────────────────────────────────────────────────────────────────
 
 local state            = "IDLE"
 local startTime        = os.time()
 local killCount        = 0
 local plateCount       = 0
 local startXP          = 0
-local lootLog          = {} -- [name] = { count, gpTotal }
+local lootLog          = {}
 local totalGP          = 0
 local bossRoomStartPos = nil
-
--- ── GUI ───────────────────────────────────────────────────────────────────────
-
 local gui              = GUILib.new()
-
--- ── Helpers ───────────────────────────────────────────────────────────────────
-
 local instanceTimer    = { { 861, 0, -1, -1, 0 }, { 861, 2, -1, 0, 0 }, { 861, 4, -1, 2, 0 }, { 861, 8, -1, 4, 0 } }
 
 local function isInstanceTimerPresent()
@@ -125,7 +116,6 @@ local function getGpHr()
     return totalGP / s * 3600
 end
 
--- ── Portal logic ──────────────────────────────────────────────────────────────
 
 local function enterRasialPortal()
     if not inWarArea() then return false end
@@ -143,7 +133,6 @@ local function confirmBossEntry()
     API.DoAction_Interface(0x24, 0xffffffff, 1, 1591, 60, -1, API.OFF_ACT_GeneralInterface_route)
 end
 
--- ── Boss combat ───────────────────────────────────────────────────────────────
 
 local HERMOD_ANIM_DODGE = 21650
 local DODGE_COOLDOWN    = 4 -- seconden (dekt de animatieduur)
@@ -375,7 +364,7 @@ local function handleBossRoom()
 
     eatNdrink()
 
-    -- 1. ALTIJD eerst: dodge check (overrides zombies en aanvallen)
+    -- 1. ALTIJD eerst: dodge check
     if hermod and hermod.Anim == HERMOD_ANIM_DODGE then
         local now = os.time()
         if now - lastDodgeTime >= DODGE_COOLDOWN then
@@ -392,7 +381,7 @@ local function handleBossRoom()
         return
     end
 
-    -- 2. Armored Zombies (Hermod immuun zolang ze leven)
+    -- 2. Armored Zombies (Hermod immuune zolang ze leven)
     local zombies = API.ReadAllObjectsArray({ 1 }, { ARMORED_ZOMBIE }, {})
     print("[Debug][Boss] Zombies=" .. (zombies and #zombies or 0)
         .. " Hermod=" .. (hermod and "ja Anim=" .. hermod.Anim or "nee"))
@@ -431,7 +420,7 @@ local function handleBossRoom()
         return
     end
 
-    -- 4. Hermod dood? → loot (1x per kill)
+    -- 4. Hermod dood? /> loot (1x per kill)
     if hermod.Life < 1 then
         if not lootTriggered then
             hermodWasAlive = false
@@ -458,7 +447,6 @@ local function renderGUI()
     gui:setupWindow("HermodFucker", 380, 0)
 
     if gui:beginWindow("Hermod Fucker v" .. SCRIPT_VERSION .. "###HermodFucker") then
-        -- State color mapping
         local stateColor
         if state == "ATTACK_HERMOD" or state == "KILLING_ZOMBIE" then
             stateColor = gui.theme.colors.success
@@ -479,7 +467,6 @@ local function renderGUI()
         local runtime = string.format("%02d:%02d:%02d", h, mins, secs)
 
         if gui:beginTabBar("##hf_tabs") then
-            -- ── Stats tab ─────────────────────────────────────────────────
             if gui:beginTab("Stats###tab_stats") then
                 if gui:beginInfoTable("##hf_stats", 0.40) then
                     gui:tableRow("State", state, stateColor)
@@ -498,7 +485,6 @@ local function renderGUI()
                 gui:endTab()
             end
 
-            -- ── Loot Log tab ──────────────────────────────────────────────
             if gui:beginTab("Loot Log###tab_loot") then
                 local sorted = {}
                 for name, entry in pairs(lootLog) do
@@ -543,12 +529,9 @@ local function renderGUI()
     gui:popTheme(colorCount, styleCount)
 end
 
--- ── Init ──────────────────────────────────────────────────────────────────────
 
 startXP = API.GetSkillXP("NECROMANCY")
 print("[Hermod] Gestart.")
-
--- ── Main loop ─────────────────────────────────────────────────────────────────
 
 API.Write_LoopyLoop(true)
 DrawImGui(renderGUI)
@@ -598,3 +581,4 @@ while API.Read_LoopyLoop() do
         end
     end
 end
+
